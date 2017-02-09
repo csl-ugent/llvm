@@ -452,13 +452,16 @@ void AsmPrinter::EmitInlineAsm(const MachineInstr *MI) const {
   // If this asmstr is empty, just print the #APP/#NOAPP markers.
   // These are useful to see where empty asm's wound up.
   if (AsmStr[0] == 0) {
+    OutStreamer.EmitDiabloHandwritten(true);
     OutStreamer.emitRawComment(MAI->getInlineAsmStart());
+    OutStreamer.EmitDiabloHandwritten(false);
     OutStreamer.emitRawComment(MAI->getInlineAsmEnd());
     return;
   }
 
   // Emit the #APP start marker.  This has to happen even if verbose-asm isn't
   // enabled, so we use emitRawComment.
+  OutStreamer.EmitDiabloHandwritten(true);
   OutStreamer.emitRawComment(MAI->getInlineAsmStart());
 
   // Get the !srcloc metadata node if we have it, and decode the loc cookie from
@@ -496,6 +499,7 @@ void AsmPrinter::EmitInlineAsm(const MachineInstr *MI) const {
 
   // Emit the #NOAPP end marker.  This has to happen even if verbose-asm isn't
   // enabled, so we use emitRawComment.
+  OutStreamer.EmitDiabloHandwritten(false);
   OutStreamer.emitRawComment(MAI->getInlineAsmEnd());
 }
 

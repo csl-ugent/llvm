@@ -52,6 +52,9 @@ private:
   unsigned ShowInst : 1;
   unsigned UseDwarfDirectory : 1;
 
+  // Use this to generate unique '$handwritten: x'
+  int HandwritenAsmCount;
+
   void EmitRegisterName(int64_t Register);
   void EmitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void EmitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
@@ -64,7 +67,7 @@ public:
       : MCStreamer(Context), OS(os), MAI(Context.getAsmInfo()),
         InstPrinter(printer), Emitter(emitter), AsmBackend(asmbackend),
         CommentStream(CommentToEmit), IsVerboseAsm(isVerboseAsm),
-        ShowInst(showInst), UseDwarfDirectory(useDwarfDirectory) {
+        ShowInst(showInst), UseDwarfDirectory(useDwarfDirectory), HandwritenAsmCount(0) {
     if (InstPrinter && IsVerboseAsm)
       InstPrinter->setCommentStream(CommentStream);
   }
@@ -119,7 +122,7 @@ public:
 
   void EmitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) override;
   void EmitLabel(MCSymbol *Symbol) override;
-
+  void EmitDiabloHandwritten(bool on);
   void EmitAssemblerFlag(MCAssemblerFlag Flag) override;
   void EmitLinkerOptions(ArrayRef<std::string> Options) override;
   void EmitDataRegion(MCDataRegionType Kind) override;
@@ -329,6 +332,12 @@ void MCAsmStreamer::EmitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) {
     IsFirst = false;
     OS << **It;
   }
+  EmitEOL();
+}
+
+void MCAsmStreamer::EmitDiabloHandwritten(bool on) {
+  OS << (on ? "$handwritten" : "$compiler") << HandwritenAsmCount << ":";
+  if (!on) HandwritenAsmCount++;
   EmitEOL();
 }
 
