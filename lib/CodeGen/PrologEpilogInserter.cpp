@@ -901,6 +901,13 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
   static std::mt19937 generator(((unsigned)PaddingSeed) ^ hash_value(hash_str));
   static std::uniform_int_distribution<unsigned> distribution(1, StackPadding/8);
 
+  // Append to opportunity log
+  if (PaddingSeed) {
+    std::ofstream output("stackpadding.list", std::ofstream::app);
+    output << filename << " " << Fn.getName().str() << std::endl;
+    output.close();
+  }
+
   // Generate the random value and add padding
   unsigned pad = distribution(generator);
   Offset += pad * 8;
