@@ -897,8 +897,6 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
   // A uniform distribution is also set up across the maximum range the padding is
   // allowed to cover.
   static std::string filename = Fn.getMMI().getModule()->getName();
-  static std::string hash_str = (filename.find_last_of('/') != std::string::npos) ? filename.substr(1 + filename.find_last_of('/')) : filename;
-  static std::mt19937 generator(((unsigned)PaddingSeed) ^ hash_value(hash_str));
   static std::uniform_int_distribution<unsigned> distribution(1, StackPadding/8);
 
   // Append to opportunity log
@@ -909,6 +907,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
   }
 
   // Generate the random value and add padding
+  std::mt19937 generator(((unsigned)PaddingSeed) ^ hash_value(Fn.getName().str()));
   unsigned pad = distribution(generator);
   Offset += pad * 8;
   DEBUG(dbgs() << "Generated pad value " << pad << " Max padding " << StackPadding << std::endl);
