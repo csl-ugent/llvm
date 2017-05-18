@@ -899,16 +899,20 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
   static std::string filename = Fn.getMMI().getModule()->getName();
   static std::uniform_int_distribution<unsigned> distribution(1, StackPadding/8);
 
-  // Append to opportunity log
+  // If there's no PaddingSeed we always add the maximum padding
+  unsigned pad = StackPadding / 8;
   if (PaddingSeed) {
+    // Append to opportunity log
     std::ofstream output("stackpadding.list", std::ofstream::app);
     output << filename << " " << Fn.getName().str() << std::endl;
     output.close();
+
+    // Create the seed, PRNG, and padding
+    std::mt19937 generator(((unsigned)PaddingSeed) ^ hash_value(Fn.getName().str()));
+    pad = distribution(generator);
   }
 
-  // Generate the random value and add padding
-  std::mt19937 generator(((unsigned)PaddingSeed) ^ hash_value(Fn.getName().str()));
-  unsigned pad = distribution(generator);
+  // Add the padding
   Offset += pad * 8;
   DEBUG(dbgs() << "Generated pad value " << pad << " Max padding " << StackPadding << std::endl);
 
