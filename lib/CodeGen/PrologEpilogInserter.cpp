@@ -133,8 +133,8 @@ WarnStackSize("warn-stack-size", cl::Hidden, cl::init((unsigned)-1),
 
 // Options for stackpadding
 static cl::opt<unsigned>
-StackPadding("stackpadding",cl::Hidden, cl::init((unsigned)8),
-			  cl::desc("Stack padding minimum of 8 bytes by default"));
+StackPadding("stackpadding",cl::Hidden, cl::init((unsigned)0),
+			  cl::desc("Stack padding"));
 static cl::opt<unsigned>
 PaddingSeed("padseed",cl::Hidden, cl::init((unsigned)0),
 			  cl::desc("Random Stack Padding seed"));
