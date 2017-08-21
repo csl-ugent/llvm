@@ -16,6 +16,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
@@ -42,6 +44,8 @@
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <climits>
+#include <fstream>
+#include <random>
 
 using namespace llvm;
 
@@ -126,6 +130,14 @@ static cl::opt<unsigned>
 WarnStackSize("warn-stack-size", cl::Hidden, cl::init((unsigned)-1),
               cl::desc("Warn for stack size bigger than the given"
                        " number"));
+
+// Options for stackpadding
+static cl::opt<unsigned>
+StackPadding("stackpadding",cl::Hidden, cl::init((unsigned)8),
+			  cl::desc("Stack padding minimum of 8 bytes by default"));
+static cl::opt<unsigned>
+PaddingSeed("padseed",cl::Hidden, cl::init((unsigned)0),
+			  cl::desc("Random Stack Padding seed"));
 
 INITIALIZE_PASS_BEGIN(PEI, DEBUG_TYPE, "Prologue/Epilogue Insertion", false,
                       false)
@@ -878,6 +890,21 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
     AssignProtectedObjSet(AddrOfObjs, ProtectedObjs, MFI, StackGrowsDown,
                           Offset, MaxAlign, Skew);
   }
+
+  // To generate randomized stack padding we initialize a PRNG using the given seed,
+  // XORed with the hash of the filename. We use the XOR to ensre the random values
+  // generated aren't the same across the different files that are compiled.
+  // A uniform distribution is also set up across the maximum range the padding is
+  // allowed to cover.
+  static std::string filename = Fn.getMMI().getModule()->getName();
+  static std::string hash_str = (filename.find_last_of('/') != std::string::npos) ? filename.substr(1 + filename.find_last_of('/')) : filename;
+  static std::mt19937 generator(((unsigned)PaddingSeed) ^ hash_value(hash_str));
+  static std::uniform_int_distribution<unsigned> distribution(1, StackPadding/8);
+
+  // Generate the random value and add padding
+  unsigned pad = distribution(generator);
+  Offset += pad * 8;
+  DEBUG(dbgs() << "Generated pad value " << pad << " Max padding " << StackPadding << std::endl);
 
   SmallVector<int, 8> ObjectsToAllocate;
 

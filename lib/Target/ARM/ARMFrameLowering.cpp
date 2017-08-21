@@ -900,7 +900,9 @@ ARMFrameLowering::ResolveFrameIndexReference(const MachineFunction &MF,
   }
 
   // If there is a frame pointer, use it when we can.
-  if (hasFP(MF) && AFI->hasStackFrame()) {
+  // Delta Breakpad: Disable the choice between SP and FP, always go for SP.
+  // This results in smaller patches.
+  if (false && hasFP(MF) && AFI->hasStackFrame()) {
     // Use frame pointer to reference fixed objects. Use it for locals if
     // there are VLAs (and thus the SP isn't reliable as a base).
     if (isFixed || (hasMovingSP && !RegInfo->hasBasePointer(MF))) {
