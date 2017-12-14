@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -47,8 +48,10 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <fstream>
 #include <iterator>
 #include <new>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -465,6 +468,63 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
         AFI->recordCPEClone(i, CPE.CPI);
     }
   }
+
+  // Delta Breakpad: Creating the opportunity log.
+  // For every function we append its filename and function name,
+  // and for every BBL a line with the number of instructions it contains.
+  // We should make sure all this information is written
+  // atomically however, as compilation can be multithreaded. Therefore
+  // we prepare all output formatted correctly in a stringstream and
+  // only at the end do we actually append it.
+  std::stringstream output;
+  const static std::string filename = MF->getMMI().getModule()->getName();
+  output << filename << " " << MF->getName().str() << std::endl;
+
+  // Iterate over all basic blocks and instructions in the function
+  for (MachineBasicBlock &MBB : *MF) {
+    unsigned nr_of_ins = 0;
+    unsigned alignment = MBB.getAlignment();
+    bool data = false;
+    for (MachineBasicBlock::iterator I = MBB.SkipPHIsLabelsAndDebug(MBB.begin()), E = MBB.end(); I != E; I = MBB.SkipPHIsLabelsAndDebug(++I)) {
+      unsigned size = TII->getInstSizeInBytes(*I) / sizeof(uint32_t);
+      switch (I->getOpcode()) {
+      // Handle data
+      case ARM::CONSTPOOL_ENTRY:
+      case ARM::JUMPTABLE_ADDRS:
+      case ARM::JUMPTABLE_INSTS:
+        data = true;
+        nr_of_ins += size;
+        break;
+      // Handle code
+      default:
+        // Simply count normal sized instructions
+        if (size == 1)
+          nr_of_ins += size;
+        else
+        {
+          // For other sizes, output the previous part of the BBL (if not empty), output
+          // the size of the abnormal part (marked with an I), and start a new part.
+          if (nr_of_ins)
+            output << nr_of_ins << ':' << alignment << std::endl;
+          output << 'I' << size << ':' << '0' << std::endl;
+          nr_of_ins = 0;
+          alignment = 0;
+        }
+      }
+    }
+
+    // If we're outputting data, mark it so
+    if (data)
+      output << 'D';
+
+    // Output the part we were currently dealing with
+    output << nr_of_ins << ":" << alignment << std::endl;
+  }
+
+  // Append to the opportunity log, writing everything at once
+  std::ofstream log("nopinsertion.list", std::ofstream::app);
+  log << output.str();
+  log.close();
 
   DEBUG(dbgs() << '\n'; dumpBBs());
 

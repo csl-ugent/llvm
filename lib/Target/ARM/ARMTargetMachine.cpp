@@ -479,5 +479,6 @@ void ARMPassConfig::addPreEmitPass() {
   if (getOptLevel() != CodeGenOpt::None)
     addPass(createARMOptimizeBarriersPass());
 
+  addPass(createARMNopInsertionPass());
   addPass(createARMConstantIslandPass());
 }
