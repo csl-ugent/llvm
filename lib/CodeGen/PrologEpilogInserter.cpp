@@ -134,10 +134,10 @@ WarnStackSize("warn-stack-size", cl::Hidden, cl::init((unsigned)-1),
 // Options for stackpadding
 static cl::opt<unsigned>
 StackPadding("stackpadding",cl::Hidden, cl::init((unsigned)0),
-			  cl::desc("Stack padding"));
+			  cl::ZeroOrMore, cl::desc("Stack padding"));
 static cl::opt<unsigned>
 PaddingSeed("padseed",cl::Hidden, cl::init((unsigned)0),
-			  cl::desc("Random Stack Padding seed"));
+			  cl::ZeroOrMore, cl::desc("Random Stack Padding seed"));
 
 INITIALIZE_PASS_BEGIN(PEI, DEBUG_TYPE, "Prologue/Epilogue Insertion", false,
                       false)
