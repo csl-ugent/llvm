@@ -899,22 +899,26 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
   static std::string filename = Fn.getMMI().getModule()->getName();
   static std::uniform_int_distribution<unsigned> distribution(1, StackPadding/8);
 
-  // If there's no PaddingSeed we always add the maximum padding
-  unsigned pad = StackPadding / 8;
-  if (PaddingSeed) {
+  // Only if stack padding was specified do we output an opportunity log and
+  // (potentially) add actual padding.
+  if (StackPadding) {
     // Append to opportunity log
     std::ofstream output("stackpadding.list", std::ofstream::app);
     output << filename << " " << Fn.getName().str() << std::endl;
     output.close();
 
-    // Create the seed, PRNG, and padding
-    std::mt19937 generator(((unsigned)PaddingSeed) ^ hash_value(Fn.getName().str()));
-    pad = distribution(generator);
-  }
+    // If there's no PaddingSeed we always add the maximum padding
+    unsigned pad = StackPadding / 8;
+    if (PaddingSeed) {
+      // Create the seed, PRNG, and padding
+      std::mt19937 generator(((unsigned)PaddingSeed) ^ hash_value(Fn.getName().str()));
+      pad = distribution(generator);
+    }
 
-  // Add the padding
-  Offset += pad * 8;
-  DEBUG(dbgs() << "Generated pad value " << pad << " Max padding " << StackPadding << std::endl);
+    // Add the padding
+    Offset += pad * 8;
+    DEBUG(dbgs() << "Generated pad value " << pad << " Max padding " << StackPadding << std::endl);
+  }
 
   SmallVector<int, 8> ObjectsToAllocate;
 
