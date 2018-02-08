@@ -899,10 +899,11 @@ ARMFrameLowering::ResolveFrameIndexReference(const MachineFunction &MF,
     return Offset;
   }
 
+  // Delta Breakpad change for smaller patches; changed the use of a frame pointer from:
   // If there is a frame pointer, use it when we can.
-  // Delta Breakpad: Disable the choice between SP and FP, always go for SP.
-  // This results in smaller patches.
-  if (false && hasFP(MF) && AFI->hasStackFrame()) {
+  // To:
+  // If a frame pointer is required for use within this function, use it.
+  if ((MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken()) && AFI->hasStackFrame()) {
     // Use frame pointer to reference fixed objects. Use it for locals if
     // there are VLAs (and thus the SP isn't reliable as a base).
     if (isFixed || (hasMovingSP && !RegInfo->hasBasePointer(MF))) {
